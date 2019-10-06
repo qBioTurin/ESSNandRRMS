@@ -22,6 +22,8 @@ library(deSolve)
 cIL2 <<- 200
 cMem <<- 200
 cEBV <<- 1000
+
+# To uncomment to reproduce the DAC analysis
 #cDAC <<- - numberDAC /log(.1)
 
 probDup<<- 2/3
@@ -40,40 +42,34 @@ funODE <- function(t,y, parms){
   TekEBV = parms["TekEBV"]
   rec = parms["rec"]
   NKkillT=parms["NKkT"]
-
+  
   if( is.na(parms["DACD"]) ) 
-    {
+  {
     DACD = 0
     cDAC<<-1
-    }
+  }
   else DACD = parms["DACD"]
   
   ####
   
   ##Begin parameter rates
- 
+  
   TrD = 1/24
   TeD = 1/24
   NKD = 1/24
   
   NKVSTeff = NKkillT
   NKVSTreg = NKkillT
- 
+  
   nk2 = 1/24
 
-  DACmoves = 0
-  EBVmoves = 0
-  Teffmove = 0
-  Tregmoves = 0
-  
-  ## injections at time fixed
+  ## injections at time fixed are defined outside the model
   DACinj = 0 ## it is not MA
   EBVs = 0  ## it is not MA
-  ILe = 0
-  
- ##End parameter rates
 
- ## Begin General transitions
+  ##End parameter rates
+  
+  ## Begin General transitions
   
   IL2 <-sum(y[il2Pos])
   Treg<-sum(y[tregPos])
@@ -83,174 +79,138 @@ funODE <- function(t,y, parms){
   DAC<-sum(y[dacPos])
   ODC<-sum(y[odcPos])
   Mem<-sum(y[memPos])
-
+  
   TotMeet<-sum(y[-c(memPos)]) 
   # ODCandTeff<-ODC+Teff+Treg
   # 
   
   RestingTreg<-sum(y[restregPos])
   RestingTeff<-sum(y[resteffPos])
-
+  
+  TimoReg<- (1 - RestingTreg/63 ) * 20
+  TimoEff<- (1 - RestingTeff/1687 )* 500
+  nkborn <- (1 - NK/375 )* 100
+  
+  TeffDup = Te2 * ( 1-exp(-IL2/cIL2)  )* ( exp(-DAC/cDAC) )
+  TregDup = Tr2 * ( 1-exp(-IL2/cIL2)  )* ( exp(-DAC/cDAC) )
+  
+  
+  TeffActivation = TeE * ( 1 - exp(-EBV/cEBV)  )
+  TregActivation = TrE * ( (Teff )/(Teff + EBV+ 1) )
   
   ####### parameter to regulate the Memory cell entry
   
   if(t <= InjEBVTime[2] ) MemE=0
   else MemE = 2* TeE * ( 1-exp(-Mem/cMem)  )
   
- 
- ###################################################
+  MemActivation = MemE * ( 1- exp(-EBV/cEBV) )
+  ###################################################
   
-  TimoReg<- (1 - RestingTreg/63 ) * 20
-  TimoEff<- (1 - RestingTeff/1687 )* 500
-  nkborn <- (1 - NK/375 )* 100
+  ##Begin Transition rates
   
-  TeffDup_x_px1_y_py1_z_pz1 = Te2 * ( 1-exp(-IL2/cIL2)  )* ( exp(-DAC/cDAC) )
-  TregDup_x_px1_y_py1_z_pz1 = Tr2 * ( 1-exp(-IL2/cIL2)  )* ( exp(-DAC/cDAC) )
+  DACDegradation = DACD
+  TregDeath  = TrD
+  TeffDeath  = TeD
+  TeffkillsEBV  = TekEBV
+  TregKillsTeff  = TrkTe
+  TeffKillsODC_l_le1  = TekODC
+  TeffKillsODC_l_le2  = TekODC
+  TeffKillsODC_l_le3  = TekODC
+  TeffKillsODC_l_le4  = TekODC
+  NKkillsTreg  = NKVSTreg 
+  NKkillsTeff  = NKVSTeff 
+  Remyelinization_l_le2  = rec
+  Remyelinization_l_le3  = rec
+  Remyelinization_l_le4  = rec
+  EBVinj  = EBVs
+  NKdup  = nk2
+  NKDegradation  = NKD
+  DACInjection  = DACinj
+  NKarrive  = nkborn
+  FromTimoREG  = TimoReg
+  FromTimoEFF  = TimoEff
+  ##End Transition rates
+  ##Places array
+  ##Begin Place mapping
+  EBV  = y[1]
+  Teff  = y[2]
+  Treg  = y[3]
+  ODC_le1  = y[4]
+  ODC_le2  = y[5]
+  ODC_le3  = y[6]
+  ODC_le4  = y[7]
+  ODC_le5  = y[8]
+  NK  = y[9]
+  IL2  = y[10]
+  DAC  = y[11]
+  Resting_Teff  = y[12]
+  Resting_Treg  = y[13]
+  EffectorMemory = y[14]
+  ##End Place mapping
   
-  #cat("Time=",t/24,"TeffDup=",TeffDup_x_px1_y_py1_z_pz1,"; TregDup=",TregDup_x_px1_y_py1_z_pz1,"\n",append = T,file="DupDac.txt")
+  # General function velocities
   
-  TeffActivation_x_px1_y_py1_z_pz1 = TeE * ( 1 - exp(-EBV/cEBV)  )
-  TregActivation_x_px1_y_py1_z_pz1 = TrE * ( (Teff )/(Teff + EBV+ 1) )
-  
-  MemActivation_x_px1_y_py1_z_pz1 = MemE * ( 1- exp(-EBV/cEBV) )
+  R_TeffDup  =    + 1/TotMeet *TeffDup  * Teff ^1 * IL2 ^1
+  R_TeffDup_Sym  =    probDup * R_TeffDup 
+  R_TeffDup_Asym  = (1-probDup) * R_TeffDup 
+  R_TregDup  =   + 1/TotMeet *TregDup  * Treg ^1 * IL2 ^1
+  R_NKdup  =    + 1/TotMeet * NKdup  * NK ^1 * IL2 ^1
+  R_TeffkillsEBV  =  + 1/TotMeet * TeffkillsEBV  * EBV ^1 * Teff ^1
+  R_TregKillsTeff  =  +  1/TotMeet * TregKillsTeff  * Teff ^1 * Treg ^1
+  R_NKkillsTreg  =   + 1/TotMeet *  NKkillsTreg  * Treg ^1 * NK ^1
+  R_NKkillsTeff  =   + 1/TotMeet *  NKkillsTeff  * Teff ^1 * NK ^1
+  R_TeffKillsODC_l_le1  =  + 1/TotMeet * TeffKillsODC_l_le1  * Teff ^1 * ODC_le2 ^1
+  R_TeffKillsODC_l_le2  =  + 1/TotMeet* TeffKillsODC_l_le2  * Teff ^1 * ODC_le3 ^1
+  R_TeffKillsODC_l_le3  =  + 1/TotMeet * TeffKillsODC_l_le3  * Teff ^1 * ODC_le4 ^1
+  R_TeffKillsODC_l_le4  =  + 1/TotMeet* TeffKillsODC_l_le4  * Teff ^1 * ODC_le5 ^1
+  R_TregActivation  =  + TregActivation  * Resting_Treg ^1
+  R_TeffActivation =  + TeffActivation * Resting_Teff^1
+  R_MemActivation  =  + MemActivation  * EffectorMemory^1
+  R_FromTimoEFF  =  + FromTimoEFF 
+  R_FromTimoREG  =  + FromTimoREG
+  R_EBVinj=EBVinj
+  R_DACInjection =  + DACInjection
   
   ## End General transitions
   
+##Begin ODE Terms
 
-##Begin Transition rates
-  
-  DACDeath_x_px1_y_py1_z_pz1= DACD
-  TregDeath_x_px1_y_py1_z_pz1 = TrD
-  TeffDeath_x_px1_y_py1_z_pz1 = TeD
-  TeffkillsEBV_x_px1_y_py1_z_pz1 = TekEBV
-  TregKillsTeff_x_px1_y_py1_z_pz1 = TrkTe
-  TeffKillsODC_l_le1_x_px1_y_py1_z_pz1 = TekODC
-  TeffKillsODC_l_le2_x_px1_y_py1_z_pz1 = TekODC
-  TeffKillsODC_l_le3_x_px1_y_py1_z_pz1 = TekODC
-  TeffKillsODC_l_le4_x_px1_y_py1_z_pz1 = TekODC
-  NKkillsTreg_x_px1_y_py1_z_pz1 = NKVSTreg 
-  NKkillsTeff_x_px1_y_py1_z_pz1 = NKVSTeff 
-  Remyelinization_l_le2_x_px1_y_py1_z_pz1 = rec
-  Remyelinization_l_le3_x_px1_y_py1_z_pz1 = rec
-  Remyelinization_l_le4_x_px1_y_py1_z_pz1 = rec
- 
-  
-  EBVinj_x_px1_y_py1_z_pz1 = EBVs
+R_TregDeath =  + TregDeath * Treg^1
+R_TeffDeath =  + TeffDeath * Teff^1
+R_Remyelinization_l_le2 =  + Remyelinization_l_le2 * ODC_le2^1
+R_Remyelinization_l_le3 =  + Remyelinization_l_le3 * ODC_le3^1
+R_Remyelinization_l_le4 =  + Remyelinization_l_le4 * ODC_le4^1
+R_NKDegradation =  + NKDegradation * NK^1
+R_DACDegradation =  + DACDegradation * DAC^1
+R_NKarrive = NKarrive
+##End ODE Terms
 
-  NKdup_x_px1_y_py1_z_pz1 = nk2
-  NKDeath_x_px1_y_py1_z_pz1 = NKD
-  DACInjection_x_px1_y_py1_z_pz1 = DACinj
-  NKarrive_x_px1_y_py1_z_pz1 = nkborn
-  IL2entry_x_px1_y_py1_z_pz1 = ILe
-  MovementTeff_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 = Teffmove
-  FromTimoREG_x_px1_y_py1_z_pz1 = TimoReg
-  MovementEBV_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 = EBVmoves
-  MovementTreg_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 = Tregmoves
-  DACMovements_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 = DACmoves
-  
-  FromTimoEFF_x_px1_y_py1_z_pz1 = TimoEff
-  ##End Transition rates
-    ##Places array
-    ##Begin Place mapping
-    EBV_px1_py1_pz1 = y[1]
-    Teff_px1_py1_pz1 = y[2]
-    Treg_px1_py1_pz1 = y[3]
-    ODC_le1_px1_py1_pz1 = y[4]
-    ODC_le2_px1_py1_pz1 = y[5]
-    ODC_le3_px1_py1_pz1 = y[6]
-    ODC_le4_px1_py1_pz1 = y[7]
-    ODC_le5_px1_py1_pz1 = y[8]
-    NK_px1_py1_pz1 = y[9]
-    IL2_px1_py1_pz1 = y[10]
-    DAC_px1_py1_pz1 = y[11]
-    Resting_Teff_px1_py1_pz1 = y[12]
-    Resting_Treg_px1_py1_pz1 = y[13]
-    EffectorMemory = y[14]
-    ##End Place mapping
-    
-    ##Begin ODE Terms (X all transitions)
-    
-    R_TeffDup_x_px1_y_py1_z_pz1 =    + 1/TotMeet *TeffDup_x_px1_y_py1_z_pz1 * Teff_px1_py1_pz1^1 * IL2_px1_py1_pz1^1
-    R_TeffDup2_x_px1_y_py1_z_pz1 =    probDup * R_TeffDup_x_px1_y_py1_z_pz1
-    R_TeffDupMem_x_px1_y_py1_z_pz1 = (1-probDup) * R_TeffDup_x_px1_y_py1_z_pz1
-    
-    R_TregDup_x_px1_y_py1_z_pz1 =   + 1/TotMeet *TregDup_x_px1_y_py1_z_pz1 * Treg_px1_py1_pz1^1 * IL2_px1_py1_pz1^1
-    R_NKdup_x_px1_y_py1_z_pz1 =    + 1/TotMeet * NKdup_x_px1_y_py1_z_pz1 * NK_px1_py1_pz1^1 * IL2_px1_py1_pz1^1
-    
-    
-    R_TeffkillsEBV_x_px1_y_py1_z_pz1 =  + 1/TotMeet * TeffkillsEBV_x_px1_y_py1_z_pz1 * EBV_px1_py1_pz1^1 * Teff_px1_py1_pz1^1
-    R_TregKillsTeff_x_px1_y_py1_z_pz1 =  +  1/TotMeet * TregKillsTeff_x_px1_y_py1_z_pz1 * Teff_px1_py1_pz1^1 * Treg_px1_py1_pz1^1
-    R_NKkillsTreg_x_px1_y_py1_z_pz1 =   + 1/TotMeet *  NKkillsTreg_x_px1_y_py1_z_pz1 * Treg_px1_py1_pz1^1 * NK_px1_py1_pz1^1
-    R_NKkillsTeff_x_px1_y_py1_z_pz1 =   + 1/TotMeet *  NKkillsTeff_x_px1_y_py1_z_pz1 * Teff_px1_py1_pz1^1 * NK_px1_py1_pz1^1
-    
-    R_TeffKillsODC_l_le1_x_px1_y_py1_z_pz1 =  + 1/TotMeet * TeffKillsODC_l_le1_x_px1_y_py1_z_pz1 * Teff_px1_py1_pz1^1 * ODC_le2_px1_py1_pz1^1
-    R_TeffKillsODC_l_le2_x_px1_y_py1_z_pz1 =  + 1/TotMeet* TeffKillsODC_l_le2_x_px1_y_py1_z_pz1 * Teff_px1_py1_pz1^1 * ODC_le3_px1_py1_pz1^1
-    R_TeffKillsODC_l_le3_x_px1_y_py1_z_pz1 =  + 1/TotMeet * TeffKillsODC_l_le3_x_px1_y_py1_z_pz1 * Teff_px1_py1_pz1^1 * ODC_le4_px1_py1_pz1^1
-    R_TeffKillsODC_l_le4_x_px1_y_py1_z_pz1 =  + 1/TotMeet* TeffKillsODC_l_le4_x_px1_y_py1_z_pz1 * Teff_px1_py1_pz1^1 * ODC_le5_px1_py1_pz1^1
-    
-    
-    R_TregActivation_x_px1_y_py1_z_pz1 =  + TregActivation_x_px1_y_py1_z_pz1 * Resting_Treg_px1_py1_pz1^1
-    R_TregDeath_x_px1_y_py1_z_pz1 =  + TregDeath_x_px1_y_py1_z_pz1 * Treg_px1_py1_pz1^1
-    R_TeffDeath_x_px1_y_py1_z_pz1 =  + TeffDeath_x_px1_y_py1_z_pz1 * Teff_px1_py1_pz1^1
-   
-    R_Remyelinization_l_le2_x_px1_y_py1_z_pz1 =  + Remyelinization_l_le2_x_px1_y_py1_z_pz1 * ODC_le2_px1_py1_pz1^1
-    R_Remyelinization_l_le3_x_px1_y_py1_z_pz1 =  + Remyelinization_l_le3_x_px1_y_py1_z_pz1 * ODC_le3_px1_py1_pz1^1
-    R_Remyelinization_l_le4_x_px1_y_py1_z_pz1 =  + Remyelinization_l_le4_x_px1_y_py1_z_pz1 * ODC_le4_px1_py1_pz1^1
-
-    R_TeffActivation_x_px1_y_py1_z_pz1 =  + TeffActivation_x_px1_y_py1_z_pz1 * Resting_Teff_px1_py1_pz1^1
-    R_EBVinj_x_px1_y_py1_z_pz1 =  + EBVinj_x_px1_y_py1_z_pz1
-
-    R_NKDeath_x_px1_y_py1_z_pz1 =  + NKDeath_x_px1_y_py1_z_pz1 * NK_px1_py1_pz1^1
-    R_DACInjection_x_px1_y_py1_z_pz1 =  + DACInjection_x_px1_y_py1_z_pz1
-    R_DACDeath_x_px1_y_py1_z_pz1 = + DACDeath_x_px1_y_py1_z_pz1 * DAC_px1_py1_pz1^1
-    
-    R_NKarrive_x_px1_y_py1_z_pz1 =  + NKarrive_x_px1_y_py1_z_pz1
-    
-    R_IL2entry_x_px1_y_py1_z_pz1 =  + IL2entry_x_px1_y_py1_z_pz1
-    
-    R_MovementTeff_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 =  + MovementTeff_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 * Teff_px1_py1_pz1^1
-    R_FromTimoREG_x_px1_y_py1_z_pz1 =  + FromTimoREG_x_px1_y_py1_z_pz1
-    R_MovementEBV_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 =  + MovementEBV_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 * EBV_px1_py1_pz1^1
-    R_MovementTreg_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 =  + MovementTreg_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 * Treg_px1_py1_pz1^1
-    R_DACMovements_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 =  + DACMovements_k_pz1_p_py1_q_px1_x_px1_y_py1_z_pz1 * DAC_px1_py1_pz1^1
-    R_MemActivation_x_px1_y_py1_z_pz1 =  + MemActivation_x_px1_y_py1_z_pz1 * EffectorMemory^1
-    R_FromTimoEFF_x_px1_y_py1_z_pz1 =  + FromTimoEFF_x_px1_y_py1_z_pz1
-    
-    #cat("Time=",t,"; R_TeffDupMem=",R_TeffDupMem_x_px1_y_py1_z_pz1,"; R_TregKillTeff=",R_TregKillsTeff_x_px1_y_py1_z_pz1,"; TeffD=",R_TeffDeath_x_px1_y_py1_z_pz1,"; TregD=",R_TregDeath_x_px1_y_py1_z_pz1,"; R_TregDup=",R_TregDup_x_px1_y_py1_z_pz1,"; TreR_TregActivation_x_px1_y_py1_z_pz1,"; R_MemAct=",R_MemActivation_x_px1_y_py1_z_pz1,";\n",file="memrate.txt",append = T)
-    ##End ODE Terms
-    
-    ##Begin ODE system
-    dEBV_px1_py1_pz1 = -1*R_TeffkillsEBV_x_px1_y_py1_z_pz1+1*R_EBVinj_x_px1_y_py1_z_pz1
-    
-    dTeff_px1_py1_pz1 = -1*R_TeffDeath_x_px1_y_py1_z_pz1-1*R_TeffkillsEBV_x_px1_y_py1_z_pz1-1*R_TregKillsTeff_x_px1_y_py1_z_pz1+1*R_TeffActivation_x_px1_y_py1_z_pz1-1*R_NKkillsTeff_x_px1_y_py1_z_pz1+1*R_MemActivation_x_px1_y_py1_z_pz1 + R_TeffDup2_x_px1_y_py1_z_pz1
-    
-    dTreg_px1_py1_pz1 = +1*R_TregActivation_x_px1_y_py1_z_pz1-1*R_TregDeath_x_px1_y_py1_z_pz1+1*R_TregDup_x_px1_y_py1_z_pz1-1*R_NKkillsTreg_x_px1_y_py1_z_pz1
-    
-    dODC_le1_px1_py1_pz1 = +1*R_TeffKillsODC_l_le1_x_px1_y_py1_z_pz1
-    dODC_le2_px1_py1_pz1 = -1*R_TeffKillsODC_l_le1_x_px1_y_py1_z_pz1+1*R_TeffKillsODC_l_le2_x_px1_y_py1_z_pz1-1*R_Remyelinization_l_le2_x_px1_y_py1_z_pz1
-    dODC_le3_px1_py1_pz1 = -1*R_TeffKillsODC_l_le2_x_px1_y_py1_z_pz1+1*R_TeffKillsODC_l_le3_x_px1_y_py1_z_pz1+1*R_Remyelinization_l_le2_x_px1_y_py1_z_pz1-1*R_Remyelinization_l_le3_x_px1_y_py1_z_pz1
-    dODC_le4_px1_py1_pz1 = -1*R_TeffKillsODC_l_le3_x_px1_y_py1_z_pz1+1*R_TeffKillsODC_l_le4_x_px1_y_py1_z_pz1+1*R_Remyelinization_l_le3_x_px1_y_py1_z_pz1-1*R_Remyelinization_l_le4_x_px1_y_py1_z_pz1
-    dODC_le5_px1_py1_pz1 = -1*R_TeffKillsODC_l_le4_x_px1_y_py1_z_pz1+1*R_Remyelinization_l_le4_x_px1_y_py1_z_pz1
-    
-    dNK_px1_py1_pz1 = +1*R_NKdup_x_px1_y_py1_z_pz1-1*R_NKDeath_x_px1_y_py1_z_pz1+1*R_NKarrive_x_px1_y_py1_z_pz1-1*R_NKkillsTreg_x_px1_y_py1_z_pz1-1*R_NKkillsTeff_x_px1_y_py1_z_pz1
-    
-    dIL2_px1_py1_pz1 = -1*R_TeffDup_x_px1_y_py1_z_pz1-1*R_TregDup_x_px1_y_py1_z_pz1+1*R_TeffActivation_x_px1_y_py1_z_pz1-1*R_NKdup_x_px1_y_py1_z_pz1+1*R_IL2entry_x_px1_y_py1_z_pz1 + R_MemActivation_x_px1_y_py1_z_pz1
-    
-    dDAC_px1_py1_pz1 = +1*R_DACInjection_x_px1_y_py1_z_pz1-1*R_DACDeath_x_px1_y_py1_z_pz1
-    
-    dResting_Teff_px1_py1_pz1 = -1*R_TeffActivation_x_px1_y_py1_z_pz1+1*R_FromTimoEFF_x_px1_y_py1_z_pz1
-    dResting_Treg_px1_py1_pz1 = -1*R_TregActivation_x_px1_y_py1_z_pz1+1*R_FromTimoREG_x_px1_y_py1_z_pz1
-    
-    dEffectorMemory = +1*R_TeffDupMem_x_px1_y_py1_z_pz1-1*R_MemActivation_x_px1_y_py1_z_pz1
-    
-    list(c(dEBV_px1_py1_pz1, dTeff_px1_py1_pz1, dTreg_px1_py1_pz1, dODC_le1_px1_py1_pz1, dODC_le2_px1_py1_pz1, dODC_le3_px1_py1_pz1, dODC_le4_px1_py1_pz1, dODC_le5_px1_py1_pz1, dNK_px1_py1_pz1, dIL2_px1_py1_pz1, dDAC_px1_py1_pz1, dResting_Teff_px1_py1_pz1, dResting_Treg_px1_py1_pz1, dEffectorMemory))
+##Begin ODE system
+dEBV = -1*R_TeffkillsEBV+1*R_EBVinj
+dTeff = -1*R_TeffDeath-1*R_TeffkillsEBV-1*R_TregKillsTeff+1*R_TeffActivation-1*R_NKkillsTeff+1*R_MemActivation+1*R_TeffDup_Sym
+dTreg = +1*R_TregActivation-1*R_TregDeath+1*R_TregDup-1*R_NKkillsTreg
+dODC_le1 = +1*R_TeffKillsODC_l_le1
+dODC_le2 = -1*R_TeffKillsODC_l_le1+1*R_TeffKillsODC_l_le2-1*R_Remyelinization_l_le2
+dODC_le3 = -1*R_TeffKillsODC_l_le2+1*R_TeffKillsODC_l_le3+1*R_Remyelinization_l_le2-1*R_Remyelinization_l_le3
+dODC_le4 = -1*R_TeffKillsODC_l_le3+1*R_TeffKillsODC_l_le4+1*R_Remyelinization_l_le3-1*R_Remyelinization_l_le4
+dODC_le5 = -1*R_TeffKillsODC_l_le4+1*R_Remyelinization_l_le4
+dNK = -1*R_NKkillsTreg-1*R_NKkillsTeff+1*R_NKdup-1*R_NKDegradation + R_NKarrive
+dIL2 = -1*R_TeffDup_Asym-1*R_TregDup+1*R_TeffActivation-1*R_NKdup+1*R_MemActivation-1*R_TeffDup_Sym
+dDAC = +1*R_DACInjection-1*R_DACDegradation
+dResting_Teff = -1*R_TeffActivation+1*R_FromTimoEFF
+dResting_Treg = -1*R_TregActivation+1*R_FromTimoREG
+dEffectorMemory = +1*R_TeffDup_Asym-1*R_MemActivation
+list(c(dEBV, dTeff, dTreg, dODC_le1, dODC_le2, dODC_le3, dODC_le4, dODC_le5, dNK, dIL2, dDAC, dResting_Teff, dResting_Treg, dEffectorMemory))
 }
 ##End ODE System
 
 ##Setting Markers on Places:
+
+##Setting Markers on Places:
 yini <- c(y1 = 0, y2 =0, y3 =0, y4 = 0, y5 = 0, y6 = 0, y7 = 0, y8 = 500, y9 = 375, y10 = 1000, y11 = 0, y12 = 1687, y13 = 63, y14 = 0)
 
-y_names <- c("EBV_px1_py1_pz1","Teff_px1_py1_pz1","Treg_px1_py1_pz1","ODC_le1_px1_py1_pz1","ODC_le2_px1_py1_pz1","ODC_le3_px1_py1_pz1","ODC_le4_px1_py1_pz1","ODC_le5_px1_py1_pz1","NK_px1_py1_pz1","IL2_px1_py1_pz1","DAC_px1_py1_pz1","Resting_Teff_px1_py1_pz1","Resting_Treg_px1_py1_pz1","EffectorMemory")
+y_names<-c("EBV","Teff","Treg","ODC_le1","ODC_le2","ODC_le3","ODC_le4","ODC_le5","NK","IL2","DAC","Resting_Teff","Resting_Treg","EffectorMemory")
+
 
 names(yini)= y_names
 
@@ -264,5 +224,4 @@ resteffPos<-c( which(y_names %in% grep("Resting_Teff_*", y_names, value=T)) )
 nkPos<-c( which(y_names %in% grep("NK_*", y_names, value=T)) )
 dacPos<-c( which(y_names %in% grep("DAC_*", y_names, value=T)) )
 memPos<-c( which(y_names %in% grep("EffectorMemory", y_names, value=T)) )
-
 

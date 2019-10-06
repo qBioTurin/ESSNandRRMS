@@ -1,8 +1,7 @@
-####################### Resolution DAC therapy:
+####################### Resolution Pregnant Model:
 
 library(ggplot2)
 library(plyr)
-setwd("~/Dropbox/Universita/RRMS_project/NewModel/ScriptR/")
 
 ############################################
 #### Inj times
@@ -34,10 +33,10 @@ FinalTime<-730*24
 step=24
 
 ## Parameters for sick woman
-# Treg from .2 -> .8
-# Teff from .4 -> .1
+# Treg Activation from .2 -> .8
+# Teff Activation from .4 -> .1
 
-s<-runif(100,min = 0.05,.11)
+s<-runif(100,min = 0.05,.11) # generation of the 100 trajectories
 
 
 for (j in 1:length(s)) {
@@ -53,7 +52,7 @@ p.all<-data.frame(p0=p0,p1=p1,p2=p2,p3=p3)
 row.names(p.all)<- c( "TeE","TrE","Tr2","Te2","TekODC","TrkTe","TekEBV","rec","NKkT")
 
 
-source("PregnantModel.R")
+source("ModelRRMS.R")
 
 p<-p0
 names(p)<- c( "TeE","TrE","Tr2","Te2","TekODC","TrkTe","TekEBV","rec","NKkT")
@@ -107,15 +106,24 @@ write.table(file=paste(j,"ODE.txt",sep=""),resPreg)
 
 }
 
-filesAll <- list.files('./../Pregtxt/',pattern='^[0-9]{1,4}[A-Z]{3}.txt')
+
+
+####################################
+## PLOTS
+
+
+filesAll <- list.files('./',pattern='^[0-9]{1,4}[A-Z]{3}.txt')
 result<-list()
 
 for(i in 1:length(filesAll) ){ 
-  result[[i]] <-read.csv(paste('./../Pregtxt/',filesAll[i],sep=""), sep="")
+  result[[i]] <-read.csv(paste('./',filesAll[i],sep=""), sep="")
 }
 
 dati<-ldply(result, data.frame)
-load("SickWoman.RData")
+
+dati<- as.data.frame(resPreg)
+
+ggplot(dati,aes(x=time/24))+geom_line(aes(y=ODC_le1,group=proportion,colour=proportion))
 
 ggplot(dati,aes(x=time/24))+geom_line(aes(y=ODC_le1_px1_py1_pz1,group=proportion,colour=proportion))+theme(axis.text=element_text(size=18),axis.title=element_text(size=20,face="bold"),legend.text=element_text(size=18),legend.title=element_text(size=20,face="bold")) + ylab("ODC cells \nirreversibly damaged") + xlab("Days")+ labs(col = "Treg-Teff \nbalance")+ scale_y_continuous(sec.axis = dup_axis(trans = ~./500, name = "Death percetage",labels = scales::percent  ) ) + geom_vline(xintercept=c(80,170,260,350),col="black") + geom_line(data=as.data.frame(resPreg),aes(x=time/24,y=ODC_le1_px1_py1_pz1),col="red")+xlim(0,500)
 

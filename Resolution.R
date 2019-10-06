@@ -40,11 +40,15 @@ FinalTime<-365*24
 step=24
 
 ## Parameters for healthy person
-#p<-c(.4,.2,0.09,0.5,0.1, 3 ,0.15,0.15,0.1)
+#p<-c(.4,.2,0.09,0.5,0.1, 3 ,0.15,0.1,0.1)
 ## Parameters for sick person
-p<-c(.4,.2,0.09,0.5,0.15, 1 ,0.1 ,0.15,0.1)
+p<-c(.4,.2,0.09,0.5,0.15, 1 ,0.1 ,0.1,0.1)
 
 names(p)<- c( "TeE","TrE","Tr2","Te2","TekODC","TrkTe","TekEBV","rec","NKkT")
+
+
+################################################################
+########## Model reading and resolution
 
 source("ModelRRMS.R")
 
@@ -85,8 +89,7 @@ res1[,"time"]<-res1[,"time"]/24
 
 ggplot(res1,aes(x=time))+geom_line(aes(y=res1[,ebvPos+1]))
 ggplot(res1,aes(x=time))+geom_line(aes(y=res1[,nkPos+1]))
+ggplot(res1,aes(x=time))+geom_line(aes(y=res1[,"ODC_le1"]))
 
 ggplot(res1,aes(x=time))+geom_line(aes(y=res1[,teffPos+1],col="Teff") )+geom_line(aes(y=res1[,tregPos+1],col="Treg"))
-
-
 
