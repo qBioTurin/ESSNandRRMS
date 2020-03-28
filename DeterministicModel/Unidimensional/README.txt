@@ -11,11 +11,9 @@ By using these commands is possible to generate the system of ODEs stored in a R
 
 - PN2ODE.sh ModelRRMS -M -R   (R file, in the example ModelRRMS.R we added source("transitions.R") to uploade in R enviroment the general fuctions.)
 
-
-
 - PN2ODE.sh ModelRRMS -M -C transitions (C++ solver, the file transitions.txt stores the general transitions)
  
-In Resolution.sh/Resolution.R it is possible to find a code for the C++/R solution, ince the injecions are modeled by 1) stopping the simulation, 2) modifyin the end marking of the ESSN adding the EBV cells or DAC cells, and 3) using the last marking modified as initial marking to continue the simulation.
+In Resolution.sh/Resolution.R it is possible to find a code for the C++/R solution, where the injecions are modeled by 1) stopping the simulation, 2) modifying the end marking of the ESSN adding the EBV cells or DAC cells, and 3) using the last marking modified as initial marking to continue the simulation.
  
 ----------------------------------------------------
 

@@ -9,12 +9,7 @@ library(deSolve)
 
 #Times <- seq(from = 0, to = FinalTime, by = step)
 
-##Begin parameter rates
-TrD = 0.0416667
-TeD = 0.0416667
-rec = 0.1
-NKD = 0.0416667
-DACD = 0.000462963
+
 ##End parameter rates
 
 ##Begin Transition rates
@@ -110,14 +105,3 @@ list(c(dEBV, dTeff, dTreg, dODC_le1, dODC_le2, dODC_le3, dODC_le4, dODC_le5, dNK
 
 ##Setting Markers on Places:
 yini <- c(y1 = 0, y2 =0, y3 =0, y4 = 0, y5 = 0, y6 = 0, y7 = 0, y8 = 500, y9 = 375, y10 = 1000, y11 = 0, y12 = 1687, y13 = 63, y14 = 0, y15 = 0, y16 = 0, y17 = 0)
-#t1=Sys.time()
-#res1 <-lsoda(yini,Times,funODE,parms=0,hini=hini)
-#colnames(res1)= c("Time","EBV","Teff","Treg","ODC_le1","ODC_le2","ODC_le3","ODC_le4","ODC_le5","NK","IL2","DAC","Resting_Teff","Resting_Treg","EffectorMemory","Resting_Treg_temp","Resting_Teff_temp","NK_temp")
-
-
-##REMEMBER TO INITIALIZE Times ARRAY.
-#cat("\n\nExecution time ODE:",difftime(Sys.time(), t1, unit = "secs"), "sec.\n")
-
-#write.table(file="ODE_01.txt",res1)
-
-##PLEASE REMEMBER TO DEFINE Times ARRAY

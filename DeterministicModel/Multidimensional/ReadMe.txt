@@ -1,0 +1,2 @@
+In the CompleteModel folder all the R files, the general transitions definition, data generated from GreatSPN GUI tool for studying the RRMS 3d model.
+Differently, the SymbolicModel folder contains the R files storing the system of SODE generated with SNespression (http://di.unito.it/$\sim$depierro/SNexpression) and integrated with the definition of the functions for the general transitions and the initial marking.

@@ -2,23 +2,15 @@ library(deSolve)
 library(ggplot2)
 library(plyr)
 
-### If DACther = True then model with dac therapy
-
-DACther=F
-
 ############################################
 #### Inj times ########
 
 InjEBVTime=c(7,67,127,187,247)*24
-if(DACther)
-{
-  InjDACTime= seq(60,360,by=30)*24
-  
-  }else InjDACTime= NULL
+InjDACTime= NULL
 
 ### Let define the number of DAC and EBV cells injected each time
 
-numberDAC <<- 30
+numberDAC <<- 0
 numberEBV <<- 1000
 
 ###############
@@ -60,14 +52,6 @@ names(p)<- c( "TeE","TrE","Tr2","Te2","TekODC","TrkTe","TekEBV","rec","NKkT")
 
 source("ModelRRMS.R")
 
-y_names<-c("EBV","Teff","Treg","ODC_le1","ODC_le2","ODC_le3","ODC_le4","ODC_le5","NK","IL2","DAC","Resting_Teff","Resting_Treg","EffectorMemory","Resting_Treg_temp","Resting_Teff_temp","NK_temp")
-
-names(yini)= y_names
-
-
-dacPos<-c( which(y_names %in% grep("DAC", y_names, value=T)) )
-
-###########
 res1 <-lsoda(yini,seq(from = 0, to = InjTime[1,1], by = step), funODE, parms=p)
 
 for(i in 1:length(InjTime[,1]))
@@ -102,10 +86,11 @@ for(i in 1:length(InjTime[,1]))
 
 res1<-as.data.frame(res1)
 res1[,"time"]<-res1[,"time"]/24
-colnames(res1)=c("time",y_names)
 
-ggplot(res1,aes(x=time))+geom_line(aes(y=EBV))
-ggplot(res1,aes(x=time))+geom_line(aes(y=NK))
-ggplot(res1,aes(x=time))+geom_line(aes(y=ODC_le1))
+ggplot(res1,aes(x=time))+geom_line(aes(y=res1[,ebvPos+1]))
+ggplot(res1,aes(x=time))+geom_line(aes(y=res1[,nkPos+1]))
+ggplot(res1,aes(x=time))+geom_line(aes(y=res1[,"ODC_le1"]))
 
+ggplot(res1,aes(x=time))+geom_line(aes(y=res1[,teffPos+1],col="Teff") )+geom_line(aes(y=res1[,tregPos+1],col="Treg"))
 
+save(res1, "./Desktop/CMISF2019/prova/",)

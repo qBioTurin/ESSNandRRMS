@@ -1,10 +1,5 @@
 ## Parameters list:
 
-TeE = 0.4 ;
-TrE = 0.2 ;
-Tr2 = 0.09 ;  
-Te2 = 0.5 ;
-
 cIL2 = 200;
 cMem = 200;
 cEBV = 1000;
@@ -12,10 +7,31 @@ cDAC= 13.02883;
 nk2 =  1/24
 probDup=  2/3
 
+TrD = 0.0416667
+TeD = 0.0416667
+NKD = 0.0416667
+
+TeE = p["TeE"]
+TrE = p["TrE"]
+Tr2 = p["Tr2"]
+Te2 = p["Te2"]
+TekODC = p["TekODC"]
+TrkTe = p["TrkTe"]
+TekEBV = p["TekEBV"]
+rec = p["rec"]
+NKkillT=p["NKkT"]
+
+if( is.na(p["DACD"]) )
+{
+  DACD = 0
+  cDAC<<-1
+}else{ DACD = p["DACD"]}
+
+
 InjEBVTime=  c(168 ,1608, 3048, 4488, 5928)  # hour scale
 names(InjEBVTime)=c("FirstInj", "SecondInj","ThirdInj", "FourthInj","FifthInj")
 
-RATES_killingTransitions=c(0.1 ,1,0.1, 0.1 , 0.15)
+RATES_killingTransitions=c(TekEBV,TrkTe,NKkillT, NKkillT , TekODC)
 names(RATES_killingTransitions)=c( "TeffkillsEBV","TregKillsTeff","NKkillsTreg","NKkillsTeff" ,"TeffKillsODC") 
 
 
