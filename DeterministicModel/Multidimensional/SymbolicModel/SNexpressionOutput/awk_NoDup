@@ -1,0 +1,6 @@
+BEGIN {store="";flag=0;}
+  { if (store==$0) {next;}
+    else {if (flag==1) print store; 
+	      store=$0;flag=1;next;}
+		  }
+END {print store; }

@@ -1,0 +1,11 @@
+# /bin/bash
+if [[ $# -ne 1 ]]; then
+    echo "Illegal number of parameters"
+    echo "syntax: " $0 " netname with no .sn extension"
+    exit 2
+fi
+awk -f awk_filter_func $1.sn.gen.map > functionsSMmodelGEN.map
+cat functionsSMmodelGEN.map | sort | awk -f awk_NoDup  > $1.sn.genNODUP.map 
+rm functionsSMmodelGEN.map
+echo "file containing the system of SODE: " $1.gen.ode
+echo "file containing the transition intensity functions (to be integrated): " $1.sn.genNODUP.map 
